@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('homepage text, entry point, inspection, evidence and report', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page).toHaveTitle("ORIL — Know what you're signing");
@@ -28,12 +30,34 @@ test('homepage text, entry point, inspection, evidence and report', async ({ pag
   await map.getByRole('button', { name: 'Reset map' }).click();
   await expect(map.getByText('100%')).toBeVisible();
   await expect(page.getByText('Contract behavior is unverified')).toBeVisible();
+  const jsonDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'JSON', exact: true }).click();
+  const jsonFile = await jsonDownload;
+  expect(jsonFile.suggestedFilename()).toBe('oril-report.json');
+  expect(JSON.parse(await readFile(await jsonFile.path(), 'utf8')).kind).toBe('ERC-2612 permit');
   await page.getByRole('button', { name: /Open report/ }).click();
   await expect(page.getByText('Request inspection')).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download redacted JSON' }).click();
-  expect((await download).suggestedFilename()).toBe('oril-redacted.json');
+  const redactedFile = await download;
+  expect(redactedFile.suggestedFilename()).toBe('oril-redacted.json');
+  expect(await readFile(await redactedFile.path(), 'utf8')).not.toContain('0x0000000000000000000000000000000000000003');
+  await page.getByRole('button', { name: /Back to workspace/ }).click();
+  await page.getByRole('button', { name: 'Documentation' }).first().click();
+  await expect(page.getByRole('heading', { name: /Understand the request/ })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('network selection flags declared-chain mismatch', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'NETWORK' }).selectOption('8453');
+  await page.getByRole('button', { name: /Load example/ }).click();
+  await page.getByRole('button', { name: 'Inspect a signature' }).click();
+  await expect(page.getByText('Domain chain differs from selected network')).toBeVisible();
+  await expect(page.getByText('Lookup network: Base. Metadata is untrusted.')).toBeVisible();
+  await page.getByRole('combobox', { name: 'NETWORK' }).selectOption('4663');
+  await page.getByRole('button', { name: 'Inspect a signature' }).click();
+  await expect(page.getByText('Lookup network: Robinhood Chain. Metadata is untrusted.')).toBeVisible();
 });
 
 test('responsive controls and no horizontal overflow', async ({ page }) => {

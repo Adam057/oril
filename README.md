@@ -72,4 +72,4 @@ To repeat the BNB check after `npm run build` and `npm run start`, request `/api
 
 ## Deployment
 
-ORIL is designed for a Next.js deployment on Vercel with the project root as the root directory, `main` as the production branch, and the standard `npm run build` command. No environment variables are needed for the current public RPC configuration. Connect the repository through Vercel's GitHub integration for automatic production and preview deployments. Validate the live URL, inspection flow, reports, and RPC behavior after deployment; a successful local build alone is not production verification.
+ORIL is deployed at [oril-indol.vercel.app](https://oril-indol.vercel.app). The Vercel project uses the project root, the Next.js preset, Node.js 24, and `npm run build`. No environment variables are needed for the current public RPC configuration. The production URL, browser inspection flow, and public RPC lookups were verified on 2026-10-31. The GitHub integration should target `main` for production and other branches for previews; confirm that connection in Vercel before relying on automatic deployments.
